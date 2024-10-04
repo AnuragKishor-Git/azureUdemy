@@ -1,5 +1,10 @@
 pipeline {
     agent any 
+    options {
+        // Set a custom workspace directory
+        workspace '/home/ub24-dev/terraform'
+    }
+
     tools {
         "org.jenkinsci.plugins.terraform.TerraformInstallation" "terraform"
     }
