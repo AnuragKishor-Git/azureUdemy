@@ -1,79 +1,69 @@
 pipeline {
-    agent any 
+  agent any 
     tools {
         "org.jenkinsci.plugins.terraform.TerraformInstallation" "terraform"
     }
-    environment {
-        TF_HOME = tool('terraform')
-        TF_IN_AUTOMATION = "true"
-        PATH = "$TF_HOME:$PATH"
+
+  options {
+    ansiColor('xterm')
+  }
+
+  environment {
+    BRANCH = 'main'
+    REPO = 'https://github.com/AnuragKishor-Git/azureUdemy.git'
+
+    ARM_ACCESS_KEY = credentials('ARM_ACCESS_KEY')
+    ARM_CLIENT_ID = credentials('ARM_CLIENT_ID')
+    ARM_CLIENT_SECRET = credentials('ARM_CLIENT_SECRET')
+    ARM_SUBSCRIPTION_ID = credentials('ARM_SUBSCRIPTION_ID')
+    ARM_TENANT_ID = credentials('ARM_TENANT_ID')
+  }
+
+  stages {
+
+    stage('Checkout Source') {
+
+      steps {
+        git branch: "$BRANCH",
+            url: "$REPO"
+      }
     }
 
-    stages {
-        stage('Checkout') {
-            steps {
-                // Checkout the source code from version control
-                checkout scm
-            }
-        }
-
-        stage('Terraform Init') {
-            steps {
-                dir("${env.TF_DIR}") {
-                    // Initialize Terraform
-                    sh 'terraform init'
-                }
-            }
-        }
-
-        stage('Terraform Validate') {
-            steps {
-                dir("${env.TF_DIR}") {
-                    // Validate the Terraform configuration
-                    sh 'terraform validate'
-                }
-            }
-        }
-
-        stage('Terraform Plan') {
-            steps {
-                dir("${env.TF_DIR}") {
-                    // Create a Terraform execution plan
-                    sh 'terraform plan'
-                }
-            }
-        }
-
-        stage('Terraform Apply') {
-            steps {
-                dir("${env.TF_DIR}") {
-                    // Apply the Terraform changes
-                    // The `-auto-approve` flag skips interactive approval
-                    sh 'terraform apply -auto-approve'
-                }
-            }
-        }
-
-        stage('Clean Up') {
-            steps {
-                dir("${env.TF_DIR}") {
-                    // Optionally, you can add cleanup steps here
-                    // e.g., removing temporary files or state files
-                }
-            }
-        }
+    stage('Terraform - init') {
+      steps {
+          sh 'terraform init -upgrade -input=false'
+      }
     }
 
-    post {
-        success {
-            echo 'Terraform applied successfully!'
-        }
-        failure {
-            echo 'Terraform application failed.'
-        }
-        always {
-            // Clean up any artifacts if necessary
-            cleanWs()
-        }
+    stage('Terraform - validate') {
+      steps {
+          sh 'terraform validate'
+      }
     }
-}
+
+    stage('Terraform - tfsec') {
+      steps {
+          sh 'tfsec .'
+      }
+    }
+
+    stage('Terraform - plan') {
+      steps {
+          sh 'terraform plan -out=tfplan -input=false'
+      }
+    }
+
+    stage('Terraform - apply') {
+      steps {
+          sh 'terraform apply -input=false tfplan'
+      }
+    }
+
+  }
+
+  post {
+    always {
+      cleanWs()
+    }
+  }
+} // pipeline
