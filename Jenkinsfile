@@ -1,9 +1,12 @@
 pipeline {
-    agent any
-
+    agent any 
+    tools {
+        "org.jenkinsci.plugins.terraform.TerraformInstallation" "terraform"
+    }
     environment {
-        // Set the working directory for Terraform
-        TF_DIR = 'terraform'  // Change to your Terraform configuration directory
+        TF_HOME = tool('terraform')
+        TF_IN_AUTOMATION = "true"
+        PATH = "$TF_HOME:$PATH"
     }
 
     stages {
